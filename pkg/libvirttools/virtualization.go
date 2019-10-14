@@ -1001,3 +1001,4 @@ func (v *VirtualizationTool) RestoreToSnapshot(vmID string, snapshotID string) e
 
 	return domain.RestoreToSnapshot(snapshotID)
 }
+
