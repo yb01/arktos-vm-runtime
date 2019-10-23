@@ -104,13 +104,13 @@ func (v *VirtletRuntimeService) Version(ctx context.Context, in *kubeapi.Version
 
 // TODO: design: should this function to be used for during POD sandbox creation OR just existing pod sandbox
 // current implementation is for existing pod sandbox
-func (v *VirtletRuntimeService) AttachNetworkInterface (ctx context.Context, in *kubeapi.DeviceAttachDetachRequest) (resp *kubeapi.DeviceAttachDetachResponse, retErr error) {
-	sandbox := v.metadataStore.PodSandbox(in.PodSandboxID)
+func (v *VirtletRuntimeService) AddNetworkInterfaceToSandbox (sandboxID string, spec *kubeapi.NicSpec) error {
+	sandbox := v.metadataStore.PodSandbox(sandboxID)
 	sandboxInfo, err := sandbox.Retrieve()
 
 	// ensure sandbox is in READY state
 	if err != nil || sandboxInfo.State != types.PodSandboxState_SANDBOX_READY {
-		return nil, fmt.Errorf("failed to get sandbox with error or sandbox is not ready")
+		return fmt.Errorf("failed to get sandbox with error or sandbox is not ready")
 	}
 
 	pnd := &tapmanager.PodNetworkDesc{
@@ -126,20 +126,23 @@ func (v *VirtletRuntimeService) AttachNetworkInterface (ctx context.Context, in 
 	var csn *network.ContainerSideNetwork
 
 	if err := json.Unmarshal(csnBytes, &csn); err != nil {
-		return nil, err
+		return err
 	}
 
 	sandboxInfo.ContainerSideNetwork = csn
 
 	if err := sandbox.Save(
 		func(c *types.PodSandboxInfo) (*types.PodSandboxInfo, error) {
-			 return sandboxInfo, nil
+			return sandboxInfo, nil
 		},
 	); err != nil {
-		return nil, err
+		return err
 	}
+}
 
-	return &kubeapi.DeviceAttachDetachResponse{}, nil
+func (v *VirtletRuntimeService) AttachNetworkInterface (ctx context.Context, in *kubeapi.DeviceAttachDetachRequest) (resp *kubeapi.DeviceAttachDetachResponse, retErr error) {
+    err := v.AddNetworkInterfaceToSandbox(in.PodSandboxID, in.Nic)
+	return &kubeapi.DeviceAttachDetachResponse{}, err
 }
 
 // RunPodSandbox implements RunPodSandbox method of CRI.
