@@ -143,11 +143,6 @@ func (v *VirtletRuntimeService) AddNetworkInterfaceToSandbox (sandboxID string, 
 	return nil
 }
 
-func (v *VirtletRuntimeService) AttachNetworkInterface (ctx context.Context, in *kubeapi.DeviceAttachDetachRequest) (resp *kubeapi.DeviceAttachDetachResponse, retErr error) {
-    err := v.AddNetworkInterfaceToSandbox(in.PodSandboxID, in.Nic)
-	return &kubeapi.DeviceAttachDetachResponse{}, err
-}
-
 // RunPodSandbox implements RunPodSandbox method of CRI.
 func (v *VirtletRuntimeService) RunPodSandbox(ctx context.Context, in *kubeapi.RunPodSandboxRequest) (response *kubeapi.RunPodSandboxResponse, retErr error) {
 	config := in.GetConfig()
