@@ -17,9 +17,11 @@ limitations under the License.
 package manager
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
+	"github.com/Mirantis/virtlet/pkg/network"
 	"time"
 
 	cnitypes "github.com/containernetworking/cni/pkg/types"
@@ -100,6 +102,46 @@ func (v *VirtletRuntimeService) Version(ctx context.Context, in *kubeapi.Version
 //
 // Sandboxes
 //
+
+// TODO: design: should this function to be used for during POD sandbox creation OR just existing pod sandbox
+// current implementation is for existing pod sandbox
+func (v *VirtletRuntimeService) AttachNetworkInterface (ctx context.Context, in *kubeapi.DeviceAttachDetachRequest) (resp *kubeapi.DeviceAttachDetachResponse, retErr error) {
+	sandbox := v.metadataStore.PodSandbox(in.PodSandboxID)
+	sandboxInfo, err := sandbox.Retrieve()
+
+	// ensure sandbox is in READY state
+	if err != nil || sandboxInfo.State != types.PodSandboxState_SANDBOX_READY {
+		return nil, fmt.Errorf("failed to get sandbox with error or sandbox is not ready")
+	}
+
+	pnd := &tapmanager.PodNetworkDesc{
+		PodID:   sandboxInfo.Config.Uid,
+		PodNs:   sandboxInfo.Config.Namespace,
+		PodName: sandboxInfo.Config.Name,
+
+	}
+
+	fdPayload := &tapmanager.GetFDPayload{Description: pnd}
+	csnBytes, err := v.fdManager.AddFDs(pnd.PodID, fdPayload)
+
+	var csn *network.ContainerSideNetwork
+
+	if err := json.Unmarshal(csnBytes, &csn); err != nil {
+		return nil, err
+	}
+
+	sandboxInfo.ContainerSideNetwork = csn
+
+	if err := sandbox.Save(
+		func(c *types.PodSandboxInfo) (*types.PodSandboxInfo, error) {
+			 return sandboxInfo, nil
+		},
+	); err != nil {
+		return nil, err
+	}
+
+	return &kubeapi.DeviceAttachDetachResponse{}, nil
+}
 
 // RunPodSandbox implements RunPodSandbox method of CRI.
 func (v *VirtletRuntimeService) RunPodSandbox(ctx context.Context, in *kubeapi.RunPodSandboxRequest) (response *kubeapi.RunPodSandboxResponse, retErr error) {
