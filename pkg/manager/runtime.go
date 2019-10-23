@@ -139,8 +139,6 @@ func (v *VirtletRuntimeService) AddNetworkInterfaceToSandbox (sandboxID string, 
 	); err != nil {
 		return err
 	}
-
-	return nil
 }
 
 // RunPodSandbox implements RunPodSandbox method of CRI.
