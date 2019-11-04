@@ -28,7 +28,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/jonboulle/clockwork"
 	"golang.org/x/net/context"
-	kubeapi "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
+	kubeapi "k8s.io/kubernetes/staging/src/k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
 
 	"github.com/Mirantis/virtlet/pkg/cni"
 	"github.com/Mirantis/virtlet/pkg/libvirttools"
@@ -138,6 +138,8 @@ func (v *VirtletRuntimeService) AddNetworkInterfaceToSandbox (sandboxID string, 
 	); err != nil {
 		return err
 	}
+
+	return nil
 }
 
 func (v *VirtletRuntimeService) AttachNetworkInterface (ctx context.Context, in *kubeapi.DeviceAttachDetachRequest) (resp *kubeapi.DeviceAttachDetachResponse, retErr error) {
