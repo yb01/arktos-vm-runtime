@@ -678,3 +678,4 @@ func checkSnapshotName(snapshotID string) error {
 
 	return nil
 }
+
