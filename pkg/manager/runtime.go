@@ -29,7 +29,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/jonboulle/clockwork"
 	"golang.org/x/net/context"
-	kubeapi "k8s.io/kubernetes/staging/src/k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+	kubeapi "k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2"
 
 	"github.com/Mirantis/virtlet/pkg/cni"
 	"github.com/Mirantis/virtlet/pkg/libvirttools"
@@ -141,11 +141,6 @@ func (v *VirtletRuntimeService) AddNetworkInterfaceToSandbox (sandboxID string, 
 	}
 
 	return nil
-}
-
-func (v *VirtletRuntimeService) AttachNetworkInterface (ctx context.Context, in *kubeapi.DeviceAttachDetachRequest) (resp *kubeapi.DeviceAttachDetachResponse, retErr error) {
-    err := v.AddNetworkInterfaceToSandbox(in.PodSandboxID, in.Nic)
-	return &kubeapi.DeviceAttachDetachResponse{}, err
 }
 
 // RunPodSandbox implements RunPodSandbox method of CRI.
@@ -612,7 +607,8 @@ func (v *VirtletRuntimeService) RebootVM(ctx context.Context, in *kubeapi.Reboot
 
 // To be implemented
 func (v *VirtletRuntimeService) AttachNetworkInterface(ctx context.Context, in *kubeapi.DeviceAttachDetachRequest) (*kubeapi.DeviceAttachDetachResponse, error) {
-	return nil, errors.New("not implemented")
+	err := v.AddNetworkInterfaceToSandbox(in.PodSandboxID, in.Nic)
+	return &kubeapi.DeviceAttachDetachResponse{}, err
 }
 
 func (v *VirtletRuntimeService) DetachNetworkInterface(ctx context.Context, in *kubeapi.DeviceAttachDetachRequest) (*kubeapi.DeviceAttachDetachResponse, error) {

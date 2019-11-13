@@ -63,7 +63,6 @@ type PodNetworkDesc struct {
 	PodName string `json:"podName"`
 	// DNS specifies DNS settings for the pod
 	DNS *cnitypes.DNS
-	//
 }
 
 // GetFDPayload contains the data that are required by TapFDSource
