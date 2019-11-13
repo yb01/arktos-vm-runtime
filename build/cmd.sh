@@ -204,10 +204,6 @@ function ensure_build_container {
     if [[ ! ${VIRTLET_SKIP_RSYNC} ]]; then
         RSYNC_ADDR="$(cat "${project_dir}/_output/rsync_addr")"
     fi
-
-    echo "add Alkaid CRI file"
-    docker cp /work/src/k8s.io/kubernetes/staging/src/k8s.io/cri-api/pkg/apis/runtime/v1alpha2/api.pb.go  virtlet-build:/go/src/github.com/Mirantis/virtlet/vendor/k8s.io/kubernetes/pkg/kubelet/apis/cri/runtime/v1alpha2/
-
 }
 
 function vsh {
