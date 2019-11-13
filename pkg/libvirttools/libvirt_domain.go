@@ -281,7 +281,3 @@ func (secret *libvirtSecret) SetValue(value []byte) error {
 func (secret *libvirtSecret) Remove() error {
 	return secret.s.Undefine()
 }
-
-func (domain *libvirtDomain) Reboot(flags libvirt.DomainRebootFlagValues) error {
-	return domain.d.Reboot(flags)
-}
