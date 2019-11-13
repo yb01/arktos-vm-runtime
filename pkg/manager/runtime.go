@@ -103,8 +103,7 @@ func (v *VirtletRuntimeService) Version(ctx context.Context, in *kubeapi.Version
 // Sandboxes
 //
 
-// TODO: design: should this function to be used for during POD sandbox creation OR just existing pod sandbox
-// current implementation is for existing pod sandbox
+// Add new networkinterface to an existing pod sandbox
 func (v *VirtletRuntimeService) AddNetworkInterfaceToSandbox (sandboxID string, spec *kubeapi.NicSpec) error {
 	glog.V(2).Infof("AttachNetworkInterfaceToSandbox %s", sandboxID)
 	sandbox := v.metadataStore.PodSandbox(sandboxID)
@@ -119,7 +118,6 @@ func (v *VirtletRuntimeService) AddNetworkInterfaceToSandbox (sandboxID string, 
 		PodID:   sandboxInfo.Config.Uid,
 		PodNs:   sandboxInfo.Config.Namespace,
 		PodName: sandboxInfo.Config.Name,
-
 	}
 
 	fdPayload := &tapmanager.GetFDPayload{Description: pnd}
