@@ -56,9 +56,11 @@ func main() {
 	nsfix.HandleReexec()
 
 	// configure glog (apparently no better way to do it ...)
-	flag.CommandLine.Parse([]string{"-v=3", "-logtostderr=true"})
+	flag.CommandLine.Parse([]string{"-v=6", "-logtostderr=true"})
 
 	runInAnotherContainer := os.Getuid() != 0
+
+	glog.V(3).Infof("runInAnotherContainer: %v", runInAnotherContainer)
 
 	var pid int
 	var err error
@@ -87,6 +89,8 @@ func main() {
 
 	emulator := os.Getenv(config.EmulatorEnvVarName)
 	emulatorArgs := os.Args[1:]
+	glog.V(3).Infof("emulator: %s, args: %s", emulator, emulatorArgs)
+
 	var netArgs []string
 	if emulator == "" {
 		// this happens during 'qemu -help' invocation by libvirt
@@ -136,6 +140,8 @@ func main() {
 			}
 		}
 	}
+
+	glog.V(3).Infof("netargs: %v", netArgs)
 
 	args := append([]string{emulator}, emulatorArgs...)
 	args = append(args, netArgs...)
