@@ -61,7 +61,6 @@ func main() {
 	runInAnotherContainer := os.Getuid() != 0
 
 	glog.V(3).Infof("runInAnotherContainer: %v", runInAnotherContainer)
-
 	var pid int
 	var err error
 	if runInAnotherContainer {
@@ -90,7 +89,6 @@ func main() {
 	emulator := os.Getenv(config.EmulatorEnvVarName)
 	emulatorArgs := os.Args[1:]
 	glog.V(3).Infof("emulator: %s, args: %s", emulator, emulatorArgs)
-
 	var netArgs []string
 	if emulator == "" {
 		// this happens during 'qemu -help' invocation by libvirt
@@ -187,3 +185,4 @@ func setupCPUSets(cm cgroups.Manager) error {
 
 	return controller.Set("cpus", cpusets)
 }
+
