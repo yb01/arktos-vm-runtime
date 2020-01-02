@@ -21,7 +21,6 @@ import (
 
 	libvirt "github.com/libvirt/libvirt-go"
 	libvirtxml "github.com/libvirt/libvirt-go-xml"
-	libvirt "github.com/libvirt/libvirt-go"
 )
 
 const (
