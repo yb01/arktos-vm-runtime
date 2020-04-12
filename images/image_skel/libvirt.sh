@@ -4,6 +4,9 @@ set -o nounset
 set -o pipefail
 set -o errtrace
 
+# ensure a name service
+echo nameserver 8.8.8.8 > /etc/resolv.conf
+
 if [[ -f /var/lib/virtlet/config.sh ]]; then
   . /var/lib/virtlet/config.sh
 fi

@@ -58,8 +58,12 @@ func main() {
 	// configure glog (apparently no better way to do it ...)
 	flag.CommandLine.Parse([]string{"-v=3", "-logtostderr=true"})
 
+	glog.V(0).Infof("debug: In vmwrapper")
+	
 	runInAnotherContainer := os.Getuid() != 0
 
+	glog.V(0).Infof("debug: runInAnotherContainer is: %v", runInAnotherContainer)
+	
 	var pid int
 	var err error
 	if runInAnotherContainer {
@@ -70,6 +74,8 @@ func main() {
 			os.Exit(1)
 		}
 	}
+
+	glog.V(0).Infof("debug: VM container process ID: %v", pid)
 
 	// FIXME: move the pid of qemu instance out of kubelet-managed
 	// for cgroups that aren't managed by libvirt.
@@ -87,6 +93,9 @@ func main() {
 
 	emulator := os.Getenv(config.EmulatorEnvVarName)
 	emulatorArgs := os.Args[1:]
+
+	glog.V(0).Infof("debug: emulator and args: %v %v", emulator, emulatorArgs)
+
 	var netArgs []string
 	if emulator == "" {
 		// this happens during 'qemu -help' invocation by libvirt
@@ -95,6 +104,8 @@ func main() {
 	} else {
 		netFdKey := os.Getenv(config.NetKeyEnvVarName)
 		nextToUseHostdevNo := 0
+
+		glog.V(0).Infof("netFdKey env and netFskey: %v %v", config.NetKeyEnvVarName, netFdKey)
 
 		if netFdKey != "" {
 			c := tapmanager.NewFDClient(fdSocketPath)
@@ -169,15 +180,19 @@ func main() {
 }
 
 func setupCPUSets(cm cgroups.Manager) error {
+	glog.V(0).Infof("debug: In setupCPUsets")
 	cpusets := os.Getenv(config.CpusetsEnvVarName)
+	glog.V(2).Infof("debug: got cpusets: %v", cpusets)
 	if cpusets == "" {
 		return nil
 	}
 
 	controller, err := cm.GetProcessController("cpuset")
+	 glog.V(2).Infof("debug: got controller returns: %v %v", controller, err)
 	if err != nil {
 		return err
 	}
 
 	return controller.Set("cpus", cpusets)
 }
+
