@@ -37,7 +37,7 @@ docker run --rm --net=host --privileged --pid=host --uts=host --ipc=host --user=
 --mount type=bind,src=/etc/libvirt/qemu,dst=/etc/libvirt/qemu \
 --mount type=bind,src=/lib/modules,dst=/lib/modules,readonly \
 --mount type=bind,src=/run,dst=/run \
---mount type=bind,src= /sys/fs/cgroup,dst=/sys/fs/cgroup \
+--mount type=bind,src=/sys/fs/cgroup,dst=/sys/fs/cgroup \
 --mount type=bind,src=/var/lib/libvirt,dst=/var/lib/libvirt \
 --mount type=bind,src=/var/lib/virtlet,dst=/var/lib/virtlet,bind-propagation=rshared \
 --mount type=bind,src=/var/log/virtlet,dst=/var/log/virtlet \
@@ -57,7 +57,7 @@ docker run --rm --net=host --privileged --pid=host --uts=host --ipc=host --user=
 --mount type=bind,src=/etc/libvirt/qemu,dst=/etc/libvirt/qemu \
 --mount type=bind,src=/lib/modules,dst=/lib/modules,readonly \
 --mount type=bind,src=/run,dst=/run \
---mount type=bind,src= /sys/fs/cgroup,dst=/sys/fs/cgroup \
+--mount type=bind,src=/sys/fs/cgroup,dst=/sys/fs/cgroup \
 --mount type=bind,src=/usr/libexec/kubernetes/kubelet-plugins/volume/exec,dst=/kubelet-volume-plugins \
 --mount type=bind,src=/var/lib/libvirt,dst=/var/lib/libvirt \
 --mount type=bind,src=/var/lib/virtlet,dst=/var/lib/virtlet,bind-propagation=rshared \
