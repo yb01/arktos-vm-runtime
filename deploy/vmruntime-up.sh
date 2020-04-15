@@ -1,5 +1,11 @@
+#!/usr/bin/env bash
 
-NODE_NAME=$(hostname)
+# Standalone, docker container based vm runtime deployment
+# Uses local ENV vriables or local config file and decoupled from k8s
+#
+# For now, it aligns with the virtlet-ds.yaml and used same set of scripts
+# to start the vms, libvirt and virtlet, as well as the node preparation
+#
 
 #virtlet container bind host directories
 #
@@ -12,7 +18,6 @@ mkdir -p /var/lib/virtlet/volumes
 docker run --rm --net=host --privileged --pid=host --uts=host --ipc=host --user=root \
 --env VIRTLET_LOGLEVEL=4 \
 --env VIRTLET_DISABLE_KVM=y \
---env KUBE_NODE_NAME=${NODE_NAME} \
 --mount type=bind,src=/dev,dst=/dev \
 --mount type=bind,src=/var/lib,dst=/host-var-lib \
 --mount type=bind,src=/run,dst=/run \
