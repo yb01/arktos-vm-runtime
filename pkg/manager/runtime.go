@@ -406,6 +406,11 @@ func (v *VirtletRuntimeService) ContainerStatus(ctx context.Context, in *kubeapi
 	}
 
 	response := &kubeapi.ContainerStatusResponse{Status: ContainerInfoToCRIContainerStatus(info)}
+
+	// vmstatus to report the configured resources of the domain
+	response.Info["configuredVcpus"] = "2"
+	response.Info["configuredMemory"] = "10000"
+
 	return response, nil
 }
 
