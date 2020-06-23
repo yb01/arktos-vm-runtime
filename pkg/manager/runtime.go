@@ -20,6 +20,9 @@ package manager
 import (
 	"errors"
 	"fmt"
+	"github.com/Mirantis/virtlet/pkg/utils/cgroups"
+	"github.com/opencontainers/runtime-spec/specs-go"
+	"path"
 	"strings"
 	"time"
 
@@ -445,18 +448,38 @@ func (v *VirtletRuntimeService) UpdateRuntimeConfig(context.Context, *kubeapi.Up
 // for container then looks for running emulator and tries to adjust its
 // current settings through cgroups
 func (v *VirtletRuntimeService) UpdateContainerResources(ctx context.Context, req *kubeapi.UpdateContainerResourcesRequest) (*kubeapi.UpdateContainerResourcesResponse, error) {
-	setByCgroup, err := v.virtTool.UpdateCpusetsForEmulatorProcess(req.GetContainerId(), req.GetLinux().CpusetCpus)
+
+	containerId := req.ContainerId
+	info, err := v.virtTool.ContainerInfo(containerId)
 	if err != nil {
 		return nil, err
 	}
-	if !setByCgroup {
-		if err = v.virtTool.UpdateCpusetsInContainerDefinition(req.GetContainerId(), req.GetLinux().CpusetCpus); err != nil {
-			return nil, err
-		}
+
+	err = cgroups.UpdateVmCgroup(path.Join(info.Config.CgroupParent, containerId), linuxContinerResourceToLinuxResource(req.GetLinux()))
+	if err != nil {
+		return nil, err
 	}
+
+	//TODO:
+	// update the domain definition instead of undefine and recdefine it
+
 	return &kubeapi.UpdateContainerResourcesResponse{}, nil
 }
 
+func linuxContinerResourceToLinuxResource ( lcr *kubeapi.LinuxContainerResources ) *specs.LinuxResources{
+
+	cpuShares := uint64(lcr.CpuShares)
+	cpuPeriod := uint64(lcr.CpuPeriod)
+
+	return &specs.LinuxResources {
+		Memory: &specs.LinuxMemory{Limit: &lcr.MemoryLimitInBytes},
+		CPU: &specs.LinuxCPU{Shares: &cpuShares,
+			Quota: &lcr.CpuQuota,
+		    Period: &cpuPeriod,
+		},
+
+	}
+}
 // Status method implements Status from CRI for both types of service, Image and Runtime.
 func (v *VirtletRuntimeService) Status(context.Context, *kubeapi.StatusRequest) (*kubeapi.StatusResponse, error) {
 	ready := true
