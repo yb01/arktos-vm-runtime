@@ -190,7 +190,6 @@ func CreateChildCgroup(cgParent string, cgName string, res *specs.LinuxResources
 
 // Update a CGroup with desired resource settings
 func UpdateVmCgroup(cgPath string, res *specs.LinuxResources) error {
-
 	cg, err := cgroups.Load(cgroups.V1, cgroups.StaticPath(cgPath))
 	if err != nil {
 		glog.Errorf("Failed to load cgroup %v. error %v", cgPath, err)

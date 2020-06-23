@@ -135,13 +135,13 @@ func (v *VirtletRuntimeService) RunPodSandbox(ctx context.Context, in *kubeapi.R
 
 	state := kubeapi.PodSandboxState_SANDBOX_READY
 	pnd := &tapmanager.PodNetworkDesc{
-		PodID:   podID,
+		PodID:     podID,
 		PodTenant: podTenant,
-		PodNs:   podNs,
-		PodName: podName,
-		VPC:     config.Annotations["VPC"],
-		NICs:    config.Annotations["NICs"],
-		CNIArgs: config.Annotations["arktos.futurewei.com/cni-args"],
+		PodNs:     podNs,
+		PodName:   podName,
+		VPC:       config.Annotations["VPC"],
+		NICs:      config.Annotations["NICs"],
+		CNIArgs:   config.Annotations["arktos.futurewei.com/cni-args"],
 	}
 	// Mimic kubelet's method of handling nameservers.
 	// As of k8s 1.5.2, kubelet doesn't use any nameserver information from CNI.
@@ -466,20 +466,20 @@ func (v *VirtletRuntimeService) UpdateContainerResources(ctx context.Context, re
 	return &kubeapi.UpdateContainerResourcesResponse{}, nil
 }
 
-func linuxContinerResourceToLinuxResource ( lcr *kubeapi.LinuxContainerResources ) *specs.LinuxResources{
+func linuxContinerResourceToLinuxResource(lcr *kubeapi.LinuxContainerResources) *specs.LinuxResources {
 
 	cpuShares := uint64(lcr.CpuShares)
 	cpuPeriod := uint64(lcr.CpuPeriod)
 
-	return &specs.LinuxResources {
+	return &specs.LinuxResources{
 		Memory: &specs.LinuxMemory{Limit: &lcr.MemoryLimitInBytes},
 		CPU: &specs.LinuxCPU{Shares: &cpuShares,
-			Quota: &lcr.CpuQuota,
-		    Period: &cpuPeriod,
+			Quota:  &lcr.CpuQuota,
+			Period: &cpuPeriod,
 		},
-
 	}
 }
+
 // Status method implements Status from CRI for both types of service, Image and Runtime.
 func (v *VirtletRuntimeService) Status(context.Context, *kubeapi.StatusRequest) (*kubeapi.StatusResponse, error) {
 	ready := true
