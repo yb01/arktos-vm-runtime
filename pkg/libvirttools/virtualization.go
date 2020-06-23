@@ -132,7 +132,11 @@ func (ds *domainSettings) createDomain(config *types.VMConfig) *libvirtxml.Domai
 		Name:   ds.domainName,
 		UUID:   ds.domainUUID,
 		Memory: &libvirtxml.DomainMemory{Value: uint(ds.memory), Unit: ds.memoryUnit},
-		VCPU:   &libvirtxml.DomainVCPU{Value: ds.vcpuNum},
+		CurrentMemory: &libvirtxml.DomainCurrentMemory{Value: uint(ds.memory), Unit: ds.memoryUnit},
+		// TODO: set max memory and CPU to host allocatable, it is controlled by the CG anyways
+		MaximumMemory: &libvirtxml.DomainMaxMemory{Value: uint(ds.memory * 2), Unit: ds.memoryUnit},
+		VCPU:   &libvirtxml.DomainVCPU{Current: string(ds.vcpuNum), Value: 2 * ds.vcpuNum },
+
 		CPUTune: &libvirtxml.DomainCPUTune{
 			Shares: &libvirtxml.DomainCPUTuneShares{Value: ds.cpuShares},
 			Period: &libvirtxml.DomainCPUTunePeriod{Value: ds.cpuPeriod},
