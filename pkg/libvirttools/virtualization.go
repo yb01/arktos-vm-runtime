@@ -23,6 +23,7 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -131,11 +132,11 @@ func (ds *domainSettings) createDomain(config *types.VMConfig) *libvirtxml.Domai
 
 		Name:   ds.domainName,
 		UUID:   ds.domainUUID,
-		Memory: &libvirtxml.DomainMemory{Value: uint(ds.memory), Unit: ds.memoryUnit},
-		CurrentMemory: &libvirtxml.DomainCurrentMemory{Value: uint(ds.memory), Unit: ds.memoryUnit},
+		Memory: &libvirtxml.DomainMemory{Value: uint(ds.memory)},
+		CurrentMemory: &libvirtxml.DomainCurrentMemory{Value: uint(ds.memory)},
 		// TODO: set max memory and CPU to host allocatable, it is controlled by the CG anyways
-		MaximumMemory: &libvirtxml.DomainMaxMemory{Value: uint(ds.memory * 2), Unit: ds.memoryUnit},
-		VCPU:   &libvirtxml.DomainVCPU{Current: string(ds.vcpuNum), Value: 2 * ds.vcpuNum },
+		MaximumMemory: &libvirtxml.DomainMaxMemory{Value: uint(ds.memory * 2), Slots: 16},
+		VCPU:   &libvirtxml.DomainVCPU{Current: strconv.Itoa(ds.vcpuNum), Value: 2 * ds.vcpuNum },
 
 		CPUTune: &libvirtxml.DomainCPUTune{
 			Shares: &libvirtxml.DomainCPUTuneShares{Value: ds.cpuShares},
