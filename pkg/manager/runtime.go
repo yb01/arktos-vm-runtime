@@ -455,19 +455,22 @@ func (v *VirtletRuntimeService) UpdateContainerResources(ctx context.Context, re
 		return nil, err
 	}
 
-	err = cgroups.UpdateVmCgroup(path.Join(info.Config.CgroupParent, containerId), linuxContinerResourceToLinuxResource(req.GetLinux()))
+	lcr := linuxContinerResourceToLinuxResource(req.GetLinux())
+
+	err = cgroups.UpdateVmCgroup(path.Join(info.Config.CgroupParent, containerId), lcr)
 	if err != nil {
 		return nil, err
 	}
 
-	//TODO:
-	// update the domain definition instead of undefine and recdefine it
+	err = v.virtTool.UpdateDomainResources(containerId, lcr)
+	if err != nil {
+		return nil, err
+	}
 
 	return &kubeapi.UpdateContainerResourcesResponse{}, nil
 }
 
 func linuxContinerResourceToLinuxResource(lcr *kubeapi.LinuxContainerResources) *specs.LinuxResources {
-
 	cpuShares := uint64(lcr.CpuShares)
 	cpuPeriod := uint64(lcr.CpuPeriod)
 

@@ -23,6 +23,7 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -129,13 +130,13 @@ func (ds *domainSettings) createDomain(config *types.VMConfig) *libvirtxml.Domai
 
 		Type: domainType,
 
-		Name:   ds.domainName,
-		UUID:   ds.domainUUID,
-		Memory: &libvirtxml.DomainMemory{Value: uint(ds.memory), Unit: ds.memoryUnit},
-		CurrentMemory: &libvirtxml.DomainCurrentMemory{Value: uint(ds.memory), Unit: ds.memoryUnit},
+		Name:          ds.domainName,
+		UUID:          ds.domainUUID,
+		Memory:        &libvirtxml.DomainMemory{Value: uint(ds.memory)},
+		CurrentMemory: &libvirtxml.DomainCurrentMemory{Value: uint(ds.memory)},
 		// TODO: set max memory and CPU to host allocatable, it is controlled by the CG anyways
-		MaximumMemory: &libvirtxml.DomainMaxMemory{Value: uint(ds.memory * 2), Unit: ds.memoryUnit},
-		VCPU:   &libvirtxml.DomainVCPU{Current: string(ds.vcpuNum), Value: 2 * ds.vcpuNum },
+		MaximumMemory: &libvirtxml.DomainMaxMemory{Value: uint(ds.memory * 2), Slots: 16},
+		VCPU:          &libvirtxml.DomainVCPU{Current: strconv.Itoa(ds.vcpuNum), Value: 2 * ds.vcpuNum},
 
 		CPUTune: &libvirtxml.DomainCPUTune{
 			Shares: &libvirtxml.DomainCPUTuneShares{Value: ds.cpuShares},
@@ -1046,4 +1047,38 @@ func (v *VirtualizationTool) RestoreToSnapshot(vmID string, snapshotID string) e
 	}
 
 	return domain.RestoreToSnapshot(snapshotID)
+}
+
+// Live update the VM compute resources
+func (v *VirtualizationTool) UpdateDomainResources(vmID string, lcr *specs.LinuxResources) error {
+	domain, err := v.domainConn.LookupDomainByUUIDString(vmID)
+	if err != nil {
+		return err
+	}
+
+	// update the vcpu count
+	domainXml, err := domain.XML()
+	if err != nil {
+		return err
+	}
+
+	// Update vcpus if needed, this is the reversed calculation from the Agent side
+	currentVcpus := domainXml.VCPU.Value
+	newVcpus := *lcr.CPU.Period / uint64(1024)
+	if newVcpus != uint64(currentVcpus) {
+		domain.SetVcpus(uint(newVcpus))
+	}
+
+	// TODO: enable the memory setting after update to newer version of libvirt in Arktos
+	//       https://github.com/futurewei-cloud/arktos-vm-runtime/issues/39
+	//// Update the memory
+	//currentMemory := domainXml.CurrentMemory.Value
+	//newmemory := *lcr.Memory.Limit / int64(defaultLibvirtDomainMemoryUnitValue)
+	//
+	//if newmemory != int64(currentMemory) {
+	//	domain.SetCurrentMemory(newmemory)
+	//}
+
+	// TODO: Update the vm config and metadata stored in Arktos-vm-runtime metadata
+	return nil
 }
