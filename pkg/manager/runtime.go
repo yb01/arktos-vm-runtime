@@ -403,7 +403,7 @@ func (v *VirtletRuntimeService) ListContainers(ctx context.Context, in *kubeapi.
 
 // ContainerStatus method implements ContainerStatus from CRI.
 func (v *VirtletRuntimeService) ContainerStatus(ctx context.Context, in *kubeapi.ContainerStatusRequest) (*kubeapi.ContainerStatusResponse, error) {
-	info, err := v.virtTool.ContainerInfo(in.ContainerId)
+	info, err := v.virtTool.SyncContainerInfoWithLibvirtDomain(in.ContainerId)
 	if err != nil {
 		return nil, err
 	}
@@ -462,6 +462,7 @@ func (v *VirtletRuntimeService) UpdateContainerResources(ctx context.Context, re
 		return nil, err
 	}
 
+	// TODO: should revert the CG update if the update domain resource function failed
 	err = v.virtTool.UpdateDomainResources(containerId, lcr)
 	if err != nil {
 		return nil, err

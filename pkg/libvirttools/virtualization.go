@@ -1063,11 +1063,18 @@ func (v *VirtualizationTool) UpdateDomainResources(vmID string, lcr *specs.Linux
 		return err
 	}
 
+	var cpuUpdated bool
+	//var memUpated bool
+
 	// Update vcpus if needed, this is the reversed calculation from the Agent side
 	currentVcpus := domainXml.VCPU.Value
 	newVcpus := *lcr.CPU.Period / uint64(1024)
 	if newVcpus != uint64(currentVcpus) {
-		domain.SetVcpus(uint(newVcpus))
+		err := domain.SetVcpus(uint(newVcpus))
+		if err != nil{
+			return err
+		}
+		cpuUpdated = true
 	}
 
 	// TODO: enable the memory setting after update to newer version of libvirt in Arktos
@@ -1081,5 +1088,123 @@ func (v *VirtualizationTool) UpdateDomainResources(vmID string, lcr *specs.Linux
 	//}
 
 	// TODO: Update the vm config and metadata stored in Arktos-vm-runtime metadata
+	containerInfo, err := v.metadataStore.Container(vmID).Retrieve()
+	if err !=nil {
+		return err
+	}
+
+	if cpuUpdated {
+		containerInfo.Config.CPUShares = int64(*lcr.CPU.Shares)
+		containerInfo.Config.CPUQuota = *lcr.CPU.Quota
+		containerInfo.Config.CPUPeriod = int64(*lcr.CPU.Period)
+	}
+	//if memUpdated {
+	//	containerInfo.Config.MemoryLimitInBytes = *lcr.Memory.Limit
+	//}
+	//
+
+	err = v.metadataStore.Container(vmID).Save(
+	func(_ *types.ContainerInfo) (*types.ContainerInfo, error) {
+		return containerInfo, nil
+	})
+
+	if err != nil {
+		glog.Errorf("failed to save containerInfo for container: %v", vmID)
+		return err
+	}
+
 	return nil
+}
+
+// ensure the containerInfo.Config in-sync with the domain xml
+// in UpdateContainerResources() API, updateDomainResource function updates both VMconfig in the containerInfo and in libvirt VM domain
+// during runtime exe crash or other error situation, there exists cases the two set of VM metadaata is out of sync
+// since the libvirt domain were updated first, so keep the domain xml as source of truth
+func (v *VirtualizationTool) SyncContainerInfoWithLibvirtDomain(vmID string) (*types.ContainerInfo, error) {
+	glog.V(4).Infof("Sync vm config with libvirt domain settings for VM: %v", vmID)
+
+	mem, cpuShares, cpuQuota, cpuPeriod, _, err := v.GetDomainConfigredResources(vmID)
+	if err !=nil {
+		return nil, err
+	}
+
+	containerInfo, err := v.metadataStore.Container(vmID).Retrieve()
+	if err !=nil {
+		return nil, err
+	}
+
+	needSync := false
+	if containerInfo.Config.MemoryLimitInBytes != mem {
+		containerInfo.Config.MemoryLimitInBytes = mem
+		needSync = true
+	}
+
+	if containerInfo.Config.CPUPeriod != cpuPeriod {
+		containerInfo.Config.CPUPeriod = cpuPeriod
+		needSync = true
+	}
+
+	if containerInfo.Config.CPUQuota != cpuQuota {
+		containerInfo.Config.CPUQuota = cpuQuota
+		needSync = true
+	}
+
+	if containerInfo.Config.CPUShares != cpuShares {
+		containerInfo.Config.CPUShares = cpuShares
+		needSync = true
+	}
+
+	if !needSync {
+		return containerInfo, nil
+	}
+
+	err = v.metadataStore.Container(vmID).Save(
+		func(_ *types.ContainerInfo) (*types.ContainerInfo, error) {
+			return containerInfo, nil
+		})
+
+	if err != nil {
+		glog.Errorf("failed to save containerInfo for container: %v", vmID)
+		return nil, err
+	}
+
+	return containerInfo, nil
+
+}
+
+func (v *VirtualizationTool) GetDomainConfigredResources(vmID string) (int64, int64, int64, int64, int, error) {
+	domain, err := v.domainConn.LookupDomainByUUIDString(vmID)
+	if err != nil {
+		return 0, 0, 0, 0, 0, err
+	}
+
+	domainXml, err := domain.XML()
+	if err != nil {
+		return  0, 0, 0, 0, 0, err
+	}
+
+	mem := domainXml.Memory.Value
+
+	switch domainXml.Memory.Unit {
+	case "KB":
+		mem = mem * 1000
+	case "KiB", "K":
+		mem = mem * 1024
+	case "MB":
+		mem = mem * 1000000
+	case "MiB", "M":
+		mem = mem * 1048576
+	case "GB":
+		mem = mem * 1000000000
+	case "GiB", "G":
+		mem = mem * 1073741824
+	}
+
+	cpuShares := domainXml.CPUTune.Shares.Value
+	cpuQuotas := domainXml.CPUTune.Quota.Value
+	cpuPeriod := domainXml.CPUTune.Period.Value
+	vCpus, _ := strconv.Atoi(domainXml.VCPU.Current)
+
+	return int64(mem), int64(cpuShares), int64(cpuQuotas), int64(cpuPeriod), vCpus , nil
+
 }
