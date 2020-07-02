@@ -19,11 +19,10 @@ func (o objectGoContextServer) Sleep() *Error {
 }
 
 func TestObjectGoWithContextTimeout(t *testing.T) {
-	bus, err := ConnectSessionBus()
+	bus, err := SessionBus()
 	if err != nil {
 		t.Fatalf("Unexpected error connecting to session bus: %s", err)
 	}
-	defer bus.Close()
 
 	name := bus.Names()[0]
 	bus.Export(objectGoContextServer{t, time.Second}, "/org/dannin/DBus/Test", "org.dannin.DBus.Test")
@@ -40,11 +39,10 @@ func TestObjectGoWithContextTimeout(t *testing.T) {
 }
 
 func TestObjectGoWithContext(t *testing.T) {
-	bus, err := ConnectSessionBus()
+	bus, err := SessionBus()
 	if err != nil {
 		t.Fatalf("Unexpected error connecting to session bus: %s", err)
 	}
-	defer bus.Close()
 
 	name := bus.Names()[0]
 	bus.Export(objectGoContextServer{t, time.Millisecond}, "/org/dannin/DBus/Test", "org.dannin.DBus.Test")
@@ -77,11 +75,10 @@ func fetchSignal(t *testing.T, ch chan *Signal, timeout time.Duration) *Signal {
 }
 
 func TestObjectSignalHandling(t *testing.T) {
-	bus, err := ConnectSessionBus()
+	bus, err := SessionBus()
 	if err != nil {
 		t.Fatalf("Unexpected error connecting to session bus: %s", err)
 	}
-	defer bus.Close()
 
 	name := bus.Names()[0]
 	path := ObjectPath("/org/godbus/DBus/TestSignals")
@@ -94,13 +91,7 @@ func TestObjectSignalHandling(t *testing.T) {
 	}
 
 	obj := bus.Object(name, path)
-	if err := bus.AddMatchSignal(
-		WithMatchInterface(iface),
-		WithMatchMember("Heartbeat"),
-		WithMatchObjectPath(path),
-	); err != nil {
-		t.Fatal(err)
-	}
+	obj.AddMatchSignal(iface, "Heartbeat", WithMatchObjectPath(obj.Path()))
 
 	ch := make(chan *Signal, 5)
 	bus.Signal(ch)

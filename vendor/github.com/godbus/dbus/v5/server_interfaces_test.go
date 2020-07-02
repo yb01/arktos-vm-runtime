@@ -165,7 +165,7 @@ func (t *tester) DeliverSignal(iface, name string, signal *Signal) {
 	t.sigs <- signal
 }
 
-func (t *tester) AddSignal(iface, name string) error {
+func (t *tester) AddSignal(iface, name string) {
 	t.subSigsMu.Lock()
 	if i, ok := t.subSigs[iface]; ok {
 		i[name] = struct{}{}
@@ -174,7 +174,8 @@ func (t *tester) AddSignal(iface, name string) error {
 		t.subSigs[iface][name] = struct{}{}
 	}
 	t.subSigsMu.Unlock()
-	return t.conn.AddMatchSignal(WithMatchInterface(iface), WithMatchMember(name))
+	t.conn.BusObject().(*Object).AddMatchSignal(
+		iface, name)
 }
 
 func (t *tester) Close() {
@@ -219,12 +220,22 @@ func newTester() (*tester, error) {
 		sigs:    make(chan *Signal),
 		subSigs: make(map[string]map[string]struct{}),
 	}
-	conn, err := ConnectSessionBus(
+	conn, err := SessionBusPrivate(
 		WithHandler(tester),
 		WithSignalHandler(tester),
 		WithSerialGenerator(tester),
 	)
 	if err != nil {
+		return nil, err
+	}
+	err = conn.Auth(nil)
+	if err != nil {
+		conn.Close()
+		return nil, err
+	}
+	err = conn.Hello()
+	if err != nil {
+		conn.Close()
 		return nil, err
 	}
 	tester.conn = conn
@@ -236,11 +247,10 @@ func TestHandlerCall(t *testing.T) {
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err)
 	}
-	conn, err := ConnectSessionBus()
+	conn, err := SessionBus()
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err)
 	}
-	defer conn.Close()
 	obj := conn.Object(tester.Name(), "/com/github/godbus/tester")
 	var out string
 	in := "foo"
@@ -259,11 +269,10 @@ func TestHandlerCallGenericError(t *testing.T) {
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err)
 	}
-	conn, err := ConnectSessionBus()
+	conn, err := SessionBus()
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err)
 	}
-	defer conn.Close()
 	obj := conn.Object(tester.Name(), "/com/github/godbus/tester")
 	var out string
 	in := "foo"
@@ -280,11 +289,10 @@ func TestHandlerCallNonExistent(t *testing.T) {
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err)
 	}
-	conn, err := ConnectSessionBus()
+	conn, err := SessionBus()
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err)
 	}
-	defer conn.Close()
 	obj := conn.Object(tester.Name(), "/com/github/godbus/tester/nonexist")
 	var out string
 	in := "foo"
@@ -302,11 +310,10 @@ func TestHandlerInvalidFunc(t *testing.T) {
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err)
 	}
-	conn, err := ConnectSessionBus()
+	conn, err := SessionBus()
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err)
 	}
-	defer conn.Close()
 	obj := conn.Object(tester.Name(), "/com/github/godbus/tester")
 	var out string
 	in := "foo"
@@ -322,11 +329,10 @@ func TestHandlerInvalidNumArg(t *testing.T) {
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err)
 	}
-	conn, err := ConnectSessionBus()
+	conn, err := SessionBus()
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err)
 	}
-	defer conn.Close()
 	obj := conn.Object(tester.Name(), "/com/github/godbus/tester")
 	var out string
 	err = obj.Call("com.github.godbus.dbus.Tester.Test", 0).Store(&out)
@@ -341,11 +347,10 @@ func TestHandlerInvalidArgType(t *testing.T) {
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err)
 	}
-	conn, err := ConnectSessionBus()
+	conn, err := SessionBus()
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err)
 	}
-	defer conn.Close()
 	obj := conn.Object(tester.Name(), "/com/github/godbus/tester")
 	var out string
 	err = obj.Call("com.github.godbus.dbus.Tester.Test", 0, 2.10).Store(&out)
@@ -360,17 +365,13 @@ func TestHandlerIntrospect(t *testing.T) {
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err)
 	}
-	conn, err := ConnectSessionBus()
+	conn, err := SessionBus()
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err)
 	}
-	defer conn.Close()
 	obj := conn.Object(tester.Name(), "/com/github/godbus/tester")
 	var out string
 	err = obj.Call("org.freedesktop.DBus.Introspectable.Introspect", 0).Store(&out)
-	if err != nil {
-		t.Errorf("Unexpected error: %s", err)
-	}
 	expected := `<node>
     <interface name="org.freedesktop.DBus.Introspectable.Introspect">
         <method name="Introspect">
@@ -398,17 +399,13 @@ func TestHandlerIntrospectPath(t *testing.T) {
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err)
 	}
-	conn, err := ConnectSessionBus()
+	conn, err := SessionBus()
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err)
 	}
-	defer conn.Close()
 	obj := conn.Object(tester.Name(), "/com/github/godbus")
 	var out string
 	err = obj.Call("org.freedesktop.DBus.Introspectable.Introspect", 0).Store(&out)
-	if err != nil {
-		t.Errorf("Unexpected error: %s", err)
-	}
 	expected := `<node><node name="tester"></node></node>`
 	if out != expected {
 		t.Errorf("didn't get expected return value, expected %s got %s", expected, out)
@@ -421,21 +418,13 @@ func TestHandlerSignal(t *testing.T) {
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err)
 	}
-	conn, err := ConnectSessionBus()
+	conn, err := SessionBus()
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err)
 	}
-	defer conn.Close()
-	if err = tester.AddSignal("com.github.godbus.dbus.Tester", "sig1"); err != nil {
-		t.Fatal(err)
-	}
-	if err = conn.Emit(
-		"/com/github/godbus/tester",
-		"com.github.godbus.dbus.Tester.sig1",
-		"foo",
-	); err != nil {
-		t.Fatal(err)
-	}
+	tester.AddSignal("com.github.godbus.dbus.Tester", "sig1")
+	conn.Emit("/com/github/godbus/tester",
+		"com.github.godbus.dbus.Tester.sig1", "foo")
 	select {
 	case sig := <-tester.sigs:
 		if sig.Body[0] != "foo" {
@@ -460,11 +449,10 @@ func TestRaceInExport(t *testing.T) {
 		dbusInterface = "org.example.godbus.test1"
 	)
 
-	bus, err := ConnectSessionBus()
+	bus, err := SessionBus()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer bus.Close()
 
 	var x X
 

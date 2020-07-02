@@ -16,7 +16,6 @@ func TestTcpNonceConnection(t *testing.T) {
 		<listen>nonce-tcp:</listen>
 		<auth>ANONYMOUS</auth>
 		<allow_anonymous/>
-                <apparmor mode="disabled"/>
 		<policy context="default">
 			<allow send_destination="*" eavesdrop="true"/>
 			<allow eavesdrop="true"/>
@@ -26,11 +25,14 @@ func TestTcpNonceConnection(t *testing.T) {
 `)
 	defer process.Kill()
 
-	conn, err := Connect(addr, WithAuth(AuthAnonymous()))
+	c, err := Dial(addr)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = conn.Close(); err != nil {
+	if err = c.Auth([]Auth{AuthAnonymous()}); err != nil {
+		t.Fatal(err)
+	}
+	if err = c.Hello(); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -48,7 +50,6 @@ func startDaemon(t *testing.T, config string) (string, *os.Process) {
 	}
 
 	cmd := exec.Command("dbus-daemon", "--nofork", "--print-address", "--config-file", cfg.Name())
-	cmd.Stderr = os.Stderr
 	out, err := cmd.StdoutPipe()
 	if err != nil {
 		t.Fatal(err)

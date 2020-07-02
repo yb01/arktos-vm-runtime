@@ -2,26 +2,19 @@ package main
 
 import (
 	"fmt"
+	"github.com/godbus/dbus"
 	"os"
-
-	"github.com/godbus/dbus/v5"
 )
 
 func main() {
-	conn, err := dbus.ConnectSessionBus()
+	conn, err := dbus.SessionBus()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Failed to connect to session bus:", err)
 		os.Exit(1)
 	}
-	defer conn.Close()
 
-	if err = conn.AddMatchSignal(
-		dbus.WithMatchObjectPath("/org/freedesktop/DBus"),
-		dbus.WithMatchInterface("org.freedesktop.DBus"),
-		dbus.WithMatchSender("org.freedesktop.DBus"),
-	); err != nil {
-		panic(err)
-	}
+	conn.BusObject().Call("org.freedesktop.DBus.AddMatch", 0,
+		"type='signal',path='/org/freedesktop/DBus',interface='org.freedesktop.DBus',sender='org.freedesktop.DBus'")
 
 	c := make(chan *dbus.Signal, 10)
 	conn.Signal(c)

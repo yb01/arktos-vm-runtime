@@ -2,11 +2,10 @@ package main
 
 import (
 	"fmt"
+	"github.com/godbus/dbus"
+	"github.com/godbus/dbus/introspect"
+	"github.com/godbus/dbus/prop"
 	"os"
-
-	"github.com/godbus/dbus/v5"
-	"github.com/godbus/dbus/v5/introspect"
-	"github.com/godbus/dbus/v5/prop"
 )
 
 type foo string
@@ -17,12 +16,10 @@ func (f foo) Foo() (string, *dbus.Error) {
 }
 
 func main() {
-	conn, err := dbus.ConnectSessionBus()
+	conn, err := dbus.SessionBus()
 	if err != nil {
 		panic(err)
 	}
-	defer conn.Close()
-
 	reply, err := conn.RequestName("com.github.guelfey.Demo",
 		dbus.NameFlagDoNotQueue)
 	if err != nil {

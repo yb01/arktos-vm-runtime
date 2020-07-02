@@ -22,11 +22,10 @@ func (t unixFDTest) Test(fd UnixFD) (string, *Error) {
 }
 
 func TestUnixFDs(t *testing.T) {
-	conn, err := ConnectSessionBus()
+	conn, err := SessionBus()
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer conn.Close()
 	r, w, err := os.Pipe()
 	if err != nil {
 		t.Fatal(err)

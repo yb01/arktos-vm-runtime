@@ -2,18 +2,16 @@ package main
 
 import (
 	"fmt"
+	"github.com/godbus/dbus"
 	"os"
-
-	"github.com/godbus/dbus/v5"
 )
 
 func main() {
-	conn, err := dbus.ConnectSessionBus()
+	conn, err := dbus.SessionBus()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Failed to connect to session bus:", err)
 		os.Exit(1)
 	}
-	defer conn.Close()
 
 	var s []string
 	err = conn.BusObject().Call("org.freedesktop.DBus.ListNames", 0).Store(&s)

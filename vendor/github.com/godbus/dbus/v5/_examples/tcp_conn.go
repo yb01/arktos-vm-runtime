@@ -5,7 +5,7 @@ import (
 	"net"
 	"os"
 
-	"github.com/godbus/dbus/v5"
+	"github.com/godbus/dbus"
 )
 
 // In order to enable TCP connections add the following configuration
@@ -47,11 +47,12 @@ func run(addr string) error {
 	if err != nil {
 		return err
 	}
-	conn, err := dbus.Connect("tcp:host="+host+",port="+port, dbus.WithAuth(dbus.AuthAnonymous()))
+	conn, err := dbus.Dial("tcp:host=" + host + ",port=" + port)
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
-	fmt.Println("connected to D-Bus over TCP")
-	return nil
+	if err = conn.Auth([]dbus.Auth{dbus.AuthAnonymous()}); err != nil {
+		return err
+	}
+	return conn.Hello()
 }
