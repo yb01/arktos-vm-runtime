@@ -240,6 +240,7 @@ func (ds *domainSettings) createDomain(config *types.VMConfig) *libvirtxml.Domai
 
 // Helper functions
 // TODO: set max memory and CPU to host allocatable, it is controlled by the CG anyways
+//       arktos runtime issue https://github.com/futurewei-cloud/arktos-vm-runtime/issues/44
 // The ds has the memory set already
 func getMaxMemoryInKiB(ds *domainSettings) uint {
 	return uint(ds.memory * 2)
