@@ -50,12 +50,12 @@ const (
 	defaultLibvirtDomainMemoryUnitValue = KiValue
 
 	// default to 1Gi
-	defaultMemory                       = 1048576
-	defaultMemoryUnit                   = "KiB"
-	defaultDomainType                   = "kvm"
-	defaultEmulator                     = "/usr/bin/kvm"
-	noKvmDomainType                     = "qemu"
-	noKvmEmulator                       = "/usr/bin/qemu-system-x86_64"
+	defaultMemory     = 1048576
+	defaultMemoryUnit = "KiB"
+	defaultDomainType = "kvm"
+	defaultEmulator   = "/usr/bin/kvm"
+	noKvmDomainType   = "qemu"
+	noKvmEmulator     = "/usr/bin/qemu-system-x86_64"
 
 	domainStartCheckInterval      = 250 * time.Millisecond
 	domainStartTimeout            = 10 * time.Second
@@ -139,11 +139,10 @@ func (ds *domainSettings) createDomain(config *types.VMConfig) *libvirtxml.Domai
 		UUID:          ds.domainUUID,
 		Memory:        &libvirtxml.DomainMemory{Value: uint(ds.memory), Unit: defaultMemoryUnit},
 		CurrentMemory: &libvirtxml.DomainCurrentMemory{Value: uint(ds.memory), Unit: defaultMemoryUnit},
-		// TODO: set max memory and CPU to host allocatable, it is controlled by the CG anyways
-		 MaximumMemory: &libvirtxml.DomainMaxMemory{Value: uint(ds.memory * 2), Unit: defaultMemoryUnit, Slots: 16},
+		MaximumMemory: &libvirtxml.DomainMaxMemory{Value: getMaxMemoryInKiB(ds), Unit: defaultMemoryUnit, Slots: 16},
 		VCPU: &libvirtxml.DomainVCPU{
-			Current: ds.vcpuNum, 
-			Value: 2 * ds.vcpuNum,
+			Current: ds.vcpuNum,
+			Value:   getMaxVcpus(ds),
 		},
 
 		CPUTune: &libvirtxml.DomainCPUTune{
@@ -172,6 +171,10 @@ func (ds *domainSettings) createDomain(config *types.VMConfig) *libvirtxml.Domai
 		},
 	}
 
+	// TODO: expose this setting to users
+	//       default cpuMode to hostModel in domainConfig
+	//       this seems to be a wall we are hitting with the current annotation based setting
+	//       design of the direct convert to domain definition can help here
 	numaid := uint(0)
 	// Set cpu model.
 	// If user understand the cpu definition of libvirt,
@@ -195,9 +198,9 @@ func (ds *domainSettings) createDomain(config *types.VMConfig) *libvirtxml.Domai
 					Cell: []libvirtxml.DomainCell{
 						{
 							ID:     &numaid,
-							CPUs:   "0-5",
-							Memory: 200000,
-							Unit:   "KiB",
+							CPUs:   getMaxVcpusOrderString(getMaxVcpus(ds)),
+							Memory: uint(ds.memory),
+							Unit:   defaultMemoryUnit,
 						},
 					},
 				},
@@ -233,6 +236,21 @@ func (ds *domainSettings) createDomain(config *types.VMConfig) *libvirtxml.Domai
 		libvirtxml.DomainQEMUCommandlineEnv{Name: vconfig.VmCgroupParentEnvVarName, Value: path.Join(config.CgroupParent, domain.UUID)})
 
 	return domain
+}
+
+// Helper functions
+// TODO: set max memory and CPU to host allocatable, it is controlled by the CG anyways
+// The ds has the memory set already
+func getMaxMemoryInKiB(ds *domainSettings) uint {
+	return uint(ds.memory * 2)
+}
+
+func getMaxVcpus(ds *domainSettings) uint {
+	return 2 * ds.vcpuNum
+}
+
+func getMaxVcpusOrderString(vcpus uint) string {
+	return fmt.Sprintf("0-%d", vcpus-1)
 }
 
 // VirtualizationConfig specifies configuration options for VirtualizationTool.
@@ -365,7 +383,7 @@ func (v *VirtualizationTool) CreateContainer(config *types.VMConfig, netFdKey st
 		domainName:  "virtlet-" + domainUUID[:13] + "-" + config.Name,
 		netFdKey:    netFdKey,
 		vcpuNum:     uint(config.ParsedAnnotations.VCPUCount),
-		memory:      int(config.MemoryLimitInBytes/KiValue),
+		memory:      int(config.MemoryLimitInBytes / KiValue),
 		memoryUnit:  defaultMemoryUnit,
 		cpuShares:   uint(config.CPUShares),
 		cpuPeriod:   uint64(config.CPUPeriod),
@@ -1084,7 +1102,7 @@ func (v *VirtualizationTool) UpdateDomainResources(vmID string, lcr *kubeapi.Lin
 	// Update the memory
 	currentMemory := domainXml.CurrentMemory.Value
 	newmemory := lcr.MemoryLimitInBytes / int64(defaultLibvirtDomainMemoryUnitValue)
-	
+
 	if newmemory != int64(currentMemory) {
 		domain.SetCurrentMemory(uint64(newmemory))
 	}
@@ -1132,7 +1150,7 @@ func (v *VirtualizationTool) SyncContainerInfoWithLibvirtDomain(vmID string) (*t
 
 	if memUnit != defaultMemoryUnit && memUnit != "K" {
 		glog.V(5).Infof("domain info: memory: %v, memoryUnit: %v, cpuShares: %v, cpuQuota: %v, cpuPeriod: %v",
-		                 mem, memUnit, cpuShares, cpuQuota, cpuPeriod )
+			mem, memUnit, cpuShares, cpuQuota, cpuPeriod)
 		return nil, fmt.Errorf("unexpected Domain MemoryUnit: %v", memUnit)
 	}
 
