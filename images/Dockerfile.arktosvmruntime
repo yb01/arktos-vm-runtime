@@ -1,7 +1,7 @@
 # TODO: generate this tag. unfortunately can't use ARG:
 # https://docs.docker.com/engine/reference/builder/#understand-how-arg-and-from-interact
 # (but add a note about it here for the future)
-FROM arktosvmruntime-base:latest
+FROM arktosstaging/vmruntime-base:v0.1
 MAINTAINER YunwenBai <yunwen.bai@futurewei.com>
 
 LABEL arktosstaging.image="arktosstaging"
