@@ -13,6 +13,8 @@ fi
 SCRIPT_DIR="$(cd $(dirname "$(readlinkf "${BASH_SOURCE}")"); pwd)"
 cd "${SCRIPT_DIR}"
 
+echo "Building arktos vm runtime"
+
 build/cmd.sh build
 build/cmd.sh copy
 if [[ ! ${SKIP_TEST:-} ]]; then
