@@ -40,6 +40,7 @@ import (
 	"github.com/Mirantis/virtlet/pkg/metadata/types"
 	"github.com/Mirantis/virtlet/pkg/utils"
 	"github.com/Mirantis/virtlet/pkg/virt"
+	containerdCgroups "github.com/containerd/cgroups"
 )
 
 const (
@@ -232,8 +233,10 @@ func (ds *domainSettings) createDomain(config *types.VMConfig) *libvirtxml.Domai
 			libvirtxml.DomainQEMUCommandlineEnv{Name: "VMWRAPPER_KEEP_PRIVS", Value: "1"})
 	}
 
-	domain.QEMUCommandline.Envs = append(domain.QEMUCommandline.Envs,
-		libvirtxml.DomainQEMUCommandlineEnv{Name: vconfig.VmCgroupParentEnvVarName, Value: path.Join(config.CgroupParent, domain.UUID)})
+	if config.CgroupParent != "" {
+		domain.QEMUCommandline.Envs = append(domain.QEMUCommandline.Envs,
+			libvirtxml.DomainQEMUCommandlineEnv{Name: vconfig.VmCgroupParentEnvVarName, Value: path.Join(config.CgroupParent, domain.UUID)})
+	}
 
 	return domain
 }
@@ -483,19 +486,27 @@ func (v *VirtualizationTool) startContainer(containerID string) error {
 
 	// create the cgroup for the qemu process
 	//TODO: hugepage setting and match with k8s pod cg property settings, after hugepage is supported in VM type
-	cpuShares := uint64(info.Config.CPUShares)
-	cg, err := cgroups.CreateChildCgroup(info.Config.CgroupParent, info.Config.DomainUUID, &specs.LinuxResources{
-		Memory: &specs.LinuxMemory{Limit: &info.Config.MemoryLimitInBytes},
-		CPU:    &specs.LinuxCPU{Shares: &cpuShares, Quota: &info.Config.CPUQuota},
-	})
+	var cg containerdCgroups.Cgroup
+	if info.Config.CgroupParent != "" {
+		cpuShares := uint64(info.Config.CPUShares)
+		cg, err = cgroups.CreateChildCgroup(info.Config.CgroupParent, info.Config.DomainUUID, &specs.LinuxResources{
+			Memory: &specs.LinuxMemory{Limit: &info.Config.MemoryLimitInBytes},
+			CPU:    &specs.LinuxCPU{Shares: &cpuShares, Quota: &info.Config.CPUQuota},
+		})
 
-	if err != nil {
-		glog.Errorf("failed to create cgroup for domain ID:%v, Name:%v", info.Config.DomainUUID, info.Config.Name)
-		return err
+		if err != nil {
+			glog.Errorf("failed to create cgroup for domain ID:%v, Name:%v", info.Config.DomainUUID, info.Config.Name)
+			return err
+		}
+	}
+	if cg != nil {
+		glog.V(4).Infof("cgroup name %v state: %v", info.Config.DomainUUID, cg.State())
 	}
 
 	if err = domain.Create(); err != nil {
-		cg.Delete()
+		if info.Config.CgroupParent != "" {
+			cg.Delete()
+		}
 		return fmt.Errorf("failed to create domain %q: %v", containerID, err)
 	}
 
