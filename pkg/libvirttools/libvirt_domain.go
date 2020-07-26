@@ -22,6 +22,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/libvirt/libvirt-go"
 	"github.com/libvirt/libvirt-go-xml"
+	"math"
 
 	"github.com/Mirantis/virtlet/pkg/virt"
 )
@@ -29,6 +30,16 @@ import (
 type libvirtDomainConnection struct {
 	conn libvirtConnection
 }
+
+// default mem chip size set to 128 MiB
+const memoryDeviceSizeInKiB = 128 * 1024
+
+const memoryDeviceDefinition = `<memory model='dimm'>
+							<target>
+								<size unit='MiB'>128</size>
+								<node>0</node>
+							</target>
+						</memory>`
 
 const snapshotXMLTemplate = `<domainsnapshot>
   								<name>%s</name>
@@ -276,10 +287,61 @@ func (domain *libvirtDomain) SetVcpus(vcpus uint) error {
 	return domain.d.SetVcpusFlags(vcpus, libvirt.DOMAIN_VCPU_CONFIG|libvirt.DOMAIN_VCPU_LIVE)
 }
 
-// Update domain current memory
-func (domain *libvirtDomain) SetCurrentMemory(memInKib uint64) error {
-	return domain.d.SetMemoryFlags(memInKib, libvirt.DOMAIN_MEM_CONFIG|libvirt.DOMAIN_MEM_LIVE)
+// TODO: move this to a helper function file
+func determineNumberOfDeviceNeeded (memChangeInKib int64, isAttach bool) int {
+	var numberMemoryDevicesNeeded int
+
+	temp := math.Abs(float64(memChangeInKib) ) / float64(memoryDeviceSizeInKiB)
+	if temp < 1 {
+		if isAttach {
+			numberMemoryDevicesNeeded = 1
+		} else {
+			numberMemoryDevicesNeeded = 0
+		}
+	} else {
+		if isAttach{
+			numberMemoryDevicesNeeded = int(math.Ceil(temp))
+		} else {
+			numberMemoryDevicesNeeded = int(math.Floor(temp))
+		}
+	}
+
+	return numberMemoryDevicesNeeded
 }
+
+// Update domain current memory
+// the memory device is 128 Mib each
+func (domain *libvirtDomain) SetCurrentMemory(memChangeInKib int64) error {
+   glog.V(4).Infof("MemoryChanges in KiB: %v", memChangeInKib)
+	// no memory changes, just return
+	if memChangeInKib == 0 {
+	   return nil
+   }
+
+	isAttach := memChangeInKib > 0
+	glog.V(4).Infof("isAttach: %v", isAttach)
+
+	numberMemoryDevicesNeeded := determineNumberOfDeviceNeeded(memChangeInKib, isAttach)
+	glog.V(4).Infof("Number of device needed : %v", numberMemoryDevicesNeeded)
+
+	for i := 0; i < numberMemoryDevicesNeeded; i++ {
+		var err error
+		if isAttach {
+			glog.V(4).Infof("Attach memory device to domain")
+			err = domain.d.AttachDeviceFlags(memoryDeviceDefinition, libvirt.DOMAIN_DEVICE_MODIFY_CONFIG|libvirt.DOMAIN_DEVICE_MODIFY_LIVE)
+		} else
+		{
+			glog.V(4).Infof("Detach memory device to domain")
+			err = domain.d.DetachDeviceFlags(memoryDeviceDefinition, libvirt.DOMAIN_DEVICE_MODIFY_CONFIG|libvirt.DOMAIN_DEVICE_MODIFY_LIVE)
+		}
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 
 type libvirtSecret struct {
 	s *libvirt.Secret
