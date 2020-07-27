@@ -1095,14 +1095,13 @@ func (v *VirtualizationTool) UpdateDomainResources(vmID string, lcr *kubeapi.Lin
 	var cpuUpdated bool
 	var memUpdated bool
 
-	// TODO: enable this after CPU bug fix
-	//glog.V(4).Infof("Update Domain CPU configuration")
-	//err = v.updateDomainCPUs(domain, lcr)
-	//if err != nil {
-	//	glog.V(4).Infof("Update Domain CPU configuration failed with error: %v", err)
-	//	return err
-	//}
-	//cpuUpdated = true
+	glog.V(4).Infof("Update Domain CPU configuration")
+	err = v.updateDomainCPUs(domain, lcr)
+	if err != nil {
+		glog.V(4).Infof("Update Domain CPU configuration failed with error: %v", err)
+		return err
+	}
+	cpuUpdated = true
 
 	glog.V(4).Infof("Update Domain Memory configuration")
 	err = v.updateDomainMemory(domain, lcr)
@@ -1149,16 +1148,20 @@ func (v *VirtualizationTool) updateDomainCPUs (domain virt.Domain, lcr *kubeapi.
 		return err
 	}
 
+	currentVcpus := domainXml.VCPU.Current
+	maxVcpus := domainXml.VCPU.Value
 	newVcpus := v.getVcpusInRequest(lcr)
-	glog.V(4).Infof("CPU Info: current CPU number: %v, newCPU number: %v. Max CPU Number: %v",
-		domainXml.VCPU.Current, newVcpus, domainXml.VCPU.Value)
-	if  newVcpus > int64(domainXml.VCPU.Value) {
+
+	glog.V(4).Infof("CPU Info: current CPU number: %v, Max CPU number: %v, newCPU number: %v.",
+		                   currentVcpus, maxVcpus, newVcpus, )
+
+	if  newVcpus > maxVcpus {
 		return fmt.Errorf("requested CPUs exceeds Max CPU configuration for the VM")
 	}
 
-	if newVcpus != int64(domainXml.VCPU.Current) {
-		glog.V(4).Infof("Update domain vCPU number: %v -> %v", domainXml.VCPU.Current, newVcpus)
-		err := domain.SetVcpus(uint(newVcpus))
+	if newVcpus != currentVcpus {
+		glog.V(4).Infof("Update domain vCPU number: %v -> %v", currentVcpus, newVcpus)
+		err := domain.SetVcpus(newVcpus)
 		if err != nil {
 			return err
 		}
@@ -1298,6 +1301,6 @@ func (v *VirtualizationTool) GetDomainConfigredResources(vmID string) (int64, st
 }
 
 // essentially the reversed calculation in Kubelet to construct the UpdateContainerRequest
-func (v *VirtualizationTool) getVcpusInRequest(lcr *kubeapi.LinuxContainerResources) int64 {
-	return lcr.CpuQuota / lcr.CpuPeriod
+func (v *VirtualizationTool) getVcpusInRequest(lcr *kubeapi.LinuxContainerResources) uint {
+	return uint(lcr.CpuQuota / lcr.CpuPeriod)
 }

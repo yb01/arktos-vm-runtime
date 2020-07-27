@@ -284,6 +284,8 @@ func (domain *libvirtDomain) RestoreToSnapshot(snapshotID string) error {
 
 // Update domain vcpu
 func (domain *libvirtDomain) SetVcpus(vcpus uint) error {
+	glog.V(4).Infof("vcpuChanges: %v", vcpus)
+
 	return domain.d.SetVcpusFlags(vcpus, libvirt.DOMAIN_VCPU_CONFIG|libvirt.DOMAIN_VCPU_LIVE)
 }
 
