@@ -101,5 +101,5 @@ profile virtlet flags=(attach_disconnected) {
   /etc/libvirt/* rw,
   /start.sh rix,
   /usr/local/bin/* rwix,
-  /etc/ssl/certs/java/* r,
+  /etc/ssl/certs/** r,
 }
