@@ -49,7 +49,7 @@ const (
 	//GiValue = 1073741824
 	// default unit in the domain is Kib
 	defaultLibvirtDomainMemoryUnitValue = KiValue
-
+	memorySlots = 16
 	// default to 1Gi
 	defaultMemory     = 1048576
 	defaultMemoryUnit = "KiB"
@@ -141,7 +141,7 @@ func (ds *domainSettings) createDomain(config *types.VMConfig) *libvirtxml.Domai
 		UUID:          ds.domainUUID,
 		Memory:        &libvirtxml.DomainMemory{Value: uint(ds.memory), Unit: defaultMemoryUnit},
 		CurrentMemory: &libvirtxml.DomainCurrentMemory{Value: uint(ds.memory), Unit: defaultMemoryUnit},
-		MaximumMemory: &libvirtxml.DomainMaxMemory{Value: getMaxMemoryInKiB(ds), Unit: defaultMemoryUnit, Slots: 16},
+		MaximumMemory: &libvirtxml.DomainMaxMemory{Value: getMaxMemoryInKiB(ds), Unit: defaultMemoryUnit, Slots: memorySlots},
 		VCPU: &libvirtxml.DomainVCPU{
 			Current: ds.vcpuNum,
 			Value:   getMaxVcpus(ds),
@@ -385,7 +385,7 @@ func (v *VirtualizationTool) CreateContainer(config *types.VMConfig, netFdKey st
 		domainUUID: domainUUID,
 		// Note: using only first 13 characters because libvirt has an issue with handling
 		// long path names for qemu monitor socket
-		domainName:  "virtlet-" + domainUUID[:13] + "-" + config.Name,
+		domainName:  "arktosRT--" + domainUUID[:13] + "-" + config.Name,
 		netFdKey:    netFdKey,
 		vcpuNum:     uint(config.ParsedAnnotations.VCPUCount),
 		memory:      int(config.MemoryLimitInBytes / KiValue),
