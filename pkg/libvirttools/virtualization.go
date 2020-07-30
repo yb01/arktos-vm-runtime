@@ -1187,7 +1187,7 @@ func (v *VirtualizationTool) updateDomainMemory(domain virt.Domain, lcr *kubeapi
 
 	if newMemory != int64(currentMemory) {
 		glog.V(4).Infof("Update domain memory in KiB: %v -> %v", currentMemory, newMemory)
-		err := domain.SetCurrentMemory(newMemory - currentMemory)
+		err := domain.AdjustDomainMemory(newMemory - currentMemory)
 		if err != nil {
 			return err
 		}
