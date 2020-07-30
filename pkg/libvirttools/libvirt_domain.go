@@ -31,6 +31,8 @@ type libvirtDomainConnection struct {
 	conn libvirtConnection
 }
 
+// TODO: runtime issue: https://github.com/futurewei-cloud/arktos-vm-runtime/issues/50
+//       multiple sizes of devices, and, numa node setting
 // default mem chip size set to 128 MiB
 const memoryDeviceSizeInKiB = 128 * 1024
 
@@ -291,19 +293,11 @@ func (domain *libvirtDomain) SetVcpus(vcpus uint) error {
 func determineNumberOfDeviceNeeded (memChangeInKib int64, isAttach bool) int {
 	var numberMemoryDevicesNeeded int
 
-	temp := math.Abs(float64(memChangeInKib) ) / float64(memoryDeviceSizeInKiB)
-	if temp < 1 {
-		if isAttach {
-			numberMemoryDevicesNeeded = 1
-		} else {
-			numberMemoryDevicesNeeded = 0
-		}
+	temp := math.Abs(float64(memChangeInKib)) / float64(memoryDeviceSizeInKiB)
+	if isAttach {
+		numberMemoryDevicesNeeded = int(math.Ceil(temp))
 	} else {
-		if isAttach{
-			numberMemoryDevicesNeeded = int(math.Ceil(temp))
-		} else {
-			numberMemoryDevicesNeeded = int(math.Floor(temp))
-		}
+		numberMemoryDevicesNeeded = int(math.Floor(temp))
 	}
 
 	return numberMemoryDevicesNeeded
@@ -311,7 +305,7 @@ func determineNumberOfDeviceNeeded (memChangeInKib int64, isAttach bool) int {
 
 // Update domain current memory
 // the memory device is 128 Mib each
-func (domain *libvirtDomain) SetCurrentMemory(memChangeInKib int64) error {
+func (domain *libvirtDomain) AdjustDomainMemory(memChangeInKib int64) error {
    glog.V(4).Infof("MemoryChanges in KiB: %v", memChangeInKib)
 	// no memory changes, just return
 	if memChangeInKib == 0 {
@@ -323,6 +317,17 @@ func (domain *libvirtDomain) SetCurrentMemory(memChangeInKib int64) error {
 
 	numberMemoryDevicesNeeded := determineNumberOfDeviceNeeded(memChangeInKib, isAttach)
 	glog.V(4).Infof("Number of device needed : %v", numberMemoryDevicesNeeded)
+
+	// TODO: pending design
+	// if number of device needed is 0, and the memory delta is not 0
+	// it means the requested resource is less than the smallest supported device size
+	// to attach or detach, consider this is an error case for now.
+	// if the hutplug/unplug approach is eventually the ONLY way to support vertical scaling, the minimal device size
+	// will need to be aware to VPA so it will round the request to match it. or the round-up is done at the runtime.
+	// TODO: create an error package in project and move all hardcoded error string to it
+	if numberMemoryDevicesNeeded == 0 {
+		return fmt.Errorf("invalid memory change size")
+	}
 
 	for i := 0; i < numberMemoryDevicesNeeded; i++ {
 		var err error
