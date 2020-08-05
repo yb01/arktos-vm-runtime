@@ -283,6 +283,10 @@ type VMConfig struct {
 	LogPath string
 	// cgroup parent specified in the linuxPodsandboxconfig
 	CgroupParent string
+	// currently a resource is being updated
+	ResourceUpdateInProgress bool
+	// Resource being updated
+	MemoryLimitInBytesBeingUpdated int64
 }
 
 // RootVolumeDevice returns the volume device that should be used for

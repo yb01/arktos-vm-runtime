@@ -1301,3 +1301,7 @@ func (v *VirtualizationTool) GetDomainConfigredResources(vmID string) (int64, st
 func (v *VirtualizationTool) getVcpusInRequest(lcr *kubeapi.LinuxContainerResources) int64 {
 	return lcr.CpuQuota / lcr.CpuPeriod
 }
+
+func (v *VirtualizationTool) SetUpdateResourceUpdateInProgress(containerID string, state bool) error {
+	return v.metadataStore.SetResourceUpdateInProgress(containerID, state)
+}

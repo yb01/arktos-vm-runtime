@@ -199,3 +199,41 @@ func (b *boltClient) ImagesInUse() (map[string]bool, error) {
 	}
 	return result, nil
 }
+
+func (b *boltClient) ResourceUpdateInProgress(containerID string) (bool, error) {
+	containerInfo, err := containerMeta{id: containerID, client: b}.Retrieve()
+
+	if err != nil {
+		return false, err
+	}
+
+	return containerInfo.Config.ResourceUpdateInProgress, nil
+
+}
+
+func (b *boltClient) SetResourceUpdateInProgress(containerID string, state bool) error {
+	containerMetadata := &containerMeta{id: containerID, client: b}
+
+	containerInfo, err := containerMeta{id: containerID, client: b}.Retrieve()
+
+	if err != nil {
+		return err
+	}
+
+	if containerInfo.Config.ResourceUpdateInProgress == state {
+		return nil
+	}
+
+	containerInfo.Config.ResourceUpdateInProgress = state
+
+	err = containerMetadata.Save(func(_ *types.ContainerInfo) (*types.ContainerInfo, error) {
+		return containerInfo, nil
+	},)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+
+}

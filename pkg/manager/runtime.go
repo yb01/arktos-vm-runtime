@@ -456,13 +456,22 @@ func (v *VirtletRuntimeService) UpdateContainerResources(ctx context.Context, re
 		return &kubeapi.UpdateContainerResourcesResponse{}, nil
 	}
 
-	lr := linuxContinerResourceToLinuxResource(lcr)
-
 	containerId := req.ContainerId
 	info, err := v.virtTool.ContainerInfo(containerId)
 	if err != nil {
 		return nil, err
 	}
+
+	// if an resource being updated currently, just ignore the call, kubelet will retry periodically on the request
+	if info.Config.ResourceUpdateInProgress == true {
+		glog.V(4).Infof("VM resource update in progress. Ignore the new request")
+		return &kubeapi.UpdateContainerResourcesResponse{}, nil
+	}
+
+	glog.V(4).Infof("Update VM config to indicate update resource is in progress")
+	v.virtTool.SetUpdateResourceUpdateInProgress(info.Id, true)
+	
+	lr := linuxContinerResourceToLinuxResource(lcr)
 
 	err = cgroups.UpdateVmCgroup(path.Join(info.Config.CgroupParent, containerId), lr)
 	if err != nil {

@@ -43,6 +43,27 @@ const memoryDeviceDefinition = `<memory model='dimm'>
 							</target>
 						</memory>`
 
+const memoryDeviceDefinition = `<memory model='dimm'>
+							<target>
+								<size unit='MiB'>512</size>
+								<node>0</node>
+							</target>
+						</memory>`
+
+const memoryDeviceDefinition = `<memory model='dimm'>
+							<target>
+								<size unit='MiB'>1024</size>
+								<node>0</node>
+							</target>
+						</memory>`
+
+const memoryDeviceDefinition = `<memory model='dimm'>
+							<target>
+								<size unit='MiB'>2048</size>
+								<node>0</node>
+							</target>
+						</memory>`
+
 const snapshotXMLTemplate = `<domainsnapshot>
   								<name>%s</name>
 							 </domainsnapshot>`
@@ -336,6 +357,23 @@ func (domain *libvirtDomain) AdjustDomainMemory(memChangeInKib int64) error {
 			err = domain.d.AttachDeviceFlags(memoryDeviceDefinition, libvirt.DOMAIN_DEVICE_MODIFY_CONFIG|libvirt.DOMAIN_DEVICE_MODIFY_LIVE)
 		} else
 		{
+			conn, err := domain.d.DomainGetConnect()
+			if err != nil {
+				return fmt.Errorf("failed get domain connecction")
+			}
+
+			conn.DomainEventDeviceRemovedRegister(domain.d, func(c *libvirt.Connect, d *libvirt.Domain, event *libvirt.DomainEventDeviceRemoved) {
+				glog.V(4).Infof("Device removed. DevAlias :%v; string: %v", event.DevAlias, event.String())
+				//TODO:
+				// SetUpdateResourceInProgress as false
+
+			})
+
+			conn.DomainEventDeviceRemovalFailedRegister(domain.d, func(c *libvirt.Connect, d *libvirt.Domain, event *libvirt.DomainEventDeviceRemovalFailed) {
+				glog.V(4).Infof("Device removal failed. DevAlias :%v; string: %v", event.DevAlias)
+				//TODO:
+				// SetUpdateResourceInProgress as false
+			})
 			glog.V(4).Infof("Detach memory device to domain")
 			err = domain.d.DetachDeviceFlags(memoryDeviceDefinition, libvirt.DOMAIN_DEVICE_MODIFY_CONFIG|libvirt.DOMAIN_DEVICE_MODIFY_LIVE)
 		}
