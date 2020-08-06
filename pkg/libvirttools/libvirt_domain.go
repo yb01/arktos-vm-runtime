@@ -43,27 +43,6 @@ const memoryDeviceDefinition = `<memory model='dimm'>
 							</target>
 						</memory>`
 
-const memoryDeviceDefinition = `<memory model='dimm'>
-							<target>
-								<size unit='MiB'>512</size>
-								<node>0</node>
-							</target>
-						</memory>`
-
-const memoryDeviceDefinition = `<memory model='dimm'>
-							<target>
-								<size unit='MiB'>1024</size>
-								<node>0</node>
-							</target>
-						</memory>`
-
-const memoryDeviceDefinition = `<memory model='dimm'>
-							<target>
-								<size unit='MiB'>2048</size>
-								<node>0</node>
-							</target>
-						</memory>`
-
 const snapshotXMLTemplate = `<domainsnapshot>
   								<name>%s</name>
 							 </domainsnapshot>`

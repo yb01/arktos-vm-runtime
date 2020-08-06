@@ -79,7 +79,7 @@ type ContainerStore interface {
 	ImagesInUse() (map[string]bool, error)
 
 	// Check if a resource setting being updated or not
-	ResourceUpdatingInProgress ( containerID string ) (bool, error)
+	ResourceUpdateInProgress ( containerID string ) (bool, error)
 
 	// Update the vmconfig.ResourceUpdateInProgress flag
 	SetResourceUpdateInProgress ( containerID string, state bool) error
